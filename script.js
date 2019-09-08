@@ -13,15 +13,19 @@ let markersRemaining;
 let currentCell;
 let nextCell;
 let stack = [];
+let notStop = true;
 
 class Cell {
-    constructor(x, y){
+    constructor(x, y, cell_size){
         this.i = x;
         this.j = y;
-        this.x = x*50;
-        this.y = y*50;
-        this.w = 50;
+        this.x = x*cell_size;
+        this.y = y*cell_size;
+        this.w = cell_size;
         this.walls = [true, true, true, true];
+        this.visited   = false;
+        this.leader    = false;
+        this.backtrack = false;
     }
 
     show(){
@@ -31,11 +35,11 @@ class Cell {
         }
         // Right
         if(this.walls[1]){
-        line(this.x+this.w, this.y, this.x+this.w, this.y+this.w);
+            line(this.x+this.w, this.y, this.x+this.w, this.y+this.w);
         }
         // Bottom
         if(this.walls[2]){
-        line(this.x+this.w, this.y+this.w, this.x, this.y+this.w);
+            line(this.x+this.w, this.y+this.w, this.x, this.y+this.w);
         }
         // Left
         if(this.walls[3]){
@@ -43,16 +47,58 @@ class Cell {
         }
     }
 
-    isVisited(){
-        // TODO: Make another color if visited
-        ctx.fillStyle = "#82daff"
-        ctx.fillRect(this.x+1, this.y+1, this.w-2, this.w-2);
+    removeWall(otherCell){
+        if(this.i == otherCell.i && this.j == otherCell.j+1){
+            // Top neighbour..
+            this.walls[0] = false;
+            otherCell.walls[2] = false;
+        }
+        if(this.i == otherCell.i-1 && this.j == otherCell.j){
+            // Right neighbour..
+            this.walls[1] = false;
+            otherCell.walls[3] = false;
+        }
+        if(this.i == otherCell.i && this.j == otherCell.j-1){
+            // Bottom neighbour..
+            this.walls[2] = false;
+            otherCell.walls[0] = false;
+        }
+        if(this.i == otherCell.i+1 && this.j == otherCell.j){
+            // Left neighbour..
+            this.walls[3] = false;
+            otherCell.walls[1] = false;
+        }
     }
 
-    removeWall(otherCell){
-        // TODO
-        // this.walls = [true, true, true, true];
+    isVisited(){ this.visited = true; }
+}
+
+function hasNeighboursNotVisited(cell){
+    // Top     0, -1
+    // Right   1,  0
+    // Bottom  0,  1
+    // Left   -1,  0
+    let x = cell.i;
+    let y = cell.j;
+    let neighbours = [];
+    if(x >=0 && y-1 >= 0){
+        neighbours.push(grid[x][y-1]); // Top
     }
+    if(x+1 < grid.length-1 && y >= 0){
+        neighbours.push(grid[x+1][y]); // Right
+    }
+    if(x >= 0 && y < grid.length-1){
+        neighbours.push(grid[x][y+1]); // Bottom
+    }
+    if(x-1 >= 0 && y >= 0){
+        neighbours.push(grid[x-1][y]); // Left
+    }
+    for(let i = 0; i < neighbours.length; i++){
+        if(!neighbours[i].visited){
+            return true
+        }
+    }
+    return false;
 }
 
 function line(x1, y1, x2, y2){
@@ -81,11 +127,9 @@ function markersRemainingUpdate(){
 
 function SetupCanvas(){
     // Parameters
-    cols = 10;
-    rows = 10;
-    cellSize = 50;
-    numTrollCells = 12;
-    markersRemaining = numTrollCells;
+    cols = 60;
+    rows = 60;
+    cellSize = 10;
 
     // Setup canvas
     canvas = document.getElementById('my-canvas');
@@ -97,19 +141,12 @@ function SetupCanvas(){
     ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Add instructions
-    // ctx.font = "20px Courier New";
-    // ctx.fillStyle = "black";
-    // ctx.fillText("1) use 'SHIFT + MOUSE-CLICK' to flag a troll", 10, cols*cellSize+30);
-    // ctx.fillText("2) press 'r' to restart", 10, cols*cellSize+60);
-    // ctx.clearRect(10, 0, 200, 100);
-
     grid = create2dArray(cols, rows);
 
     // Creating all the cells
     for(let i = 0; i < cols; i++){
         for(let j = 0; j < rows; j++){
-            grid[i][j] = new Cell(i, j);
+            grid[i][j] = new Cell(i, j, cellSize);
         }  
     }  
 
@@ -119,7 +156,7 @@ function SetupCanvas(){
             grid[i][j].show();
         }   
     }
-
+    
     currentCell = grid[0][0];
     currentCell.isVisited();
     // markersRemainingUpdate();
@@ -146,28 +183,100 @@ function chooseRandomNeighbor(currentCell){
     // Right    x+1, y 
     // Bottom   x  , y+1
     // Left     x-1, y
-    let x = currentCell.i+1;
-    let y = currentCell.j;
+    let random = ~~(Math.random() * 4);
+    let x = 0;
+    let y = 0;
+
+    switch(random){
+        case 0:
+            x = currentCell.i;
+            y = currentCell.j-1;
+            break;
+        case 1:
+            x = currentCell.i+1;
+            y = currentCell.j;
+            break;
+        case 2:
+            x = currentCell.i;
+            y = currentCell.j+1;
+            break;
+        case 3:
+            x = currentCell.i-1;
+            y = currentCell.j;
+            break;
+    }
+
+    if(currentCell.i == 0 && x == -1){
+        x = 0;
+    }
+    if(currentCell.j == 0 && y == -1){
+        y = 0;
+    }
+    if(currentCell.i == grid.length || x == grid.length){
+        x = grid.length-1;
+    }
+    if(currentCell.j == grid.length || y == grid.length){
+        y = grid.length-1;
+    }
     return grid[x][y];
 }   
 
+function showLeaderCell(cell){
+    ctx.fillStyle = "#f542ef";
+    ctx.fillRect(cell.x, cell.y, cell.w, cell.w);
+}
+
 function updateCanvas(){
-    // Every loop check if mouse is clicked
-
+    currentCell.isVisited();
+    // Show leader cell
+    showLeaderCell(currentCell);
     // If the current cell has any neighbours which have not been visited
-    //   1) Choose randomly one of the unvisited neighbours
-    nextCell = chooseRandomNeighbor(currentCell);
-    //   2) Push the current cell to the stack
-    stack.push(currentCell);
-    //   3) Remove the wall between the current cell and the chosen cell
+    if(hasNeighboursNotVisited(currentCell)){
+        //   1) Choose randomly one of the unvisited neighbours
+        nextCell = chooseRandomNeighbor(currentCell);
+        while(nextCell.visited != false){
+            nextCell = chooseRandomNeighbor(currentCell);
+        }
+        //   2) Push the current cell to the stack
+        stack.push(currentCell);
+        //   3) Remove the wall between the current cell and the chosen cell
+        nextCell.removeWall(currentCell);
+        //   4) Make the chosen cell the current cell and mark it as visited
+        currentCell = nextCell;
+        // currentCell.isVisited();
+    }
+    else if(stack.length != 0){
+        currentCell = stack.pop();
+    }
+    else{
+        return false;
+    }
+    return true;
+}
 
-    //   4) Make the chosen cell the current cell and mark it as visited
-    nextCell.isVisited();
+function draw(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Displaying the board
+    for(let i = 0; i < cols; i++){
+        for(let j = 0; j < rows; j++){
+            grid[i][j].show();
+        }   
+    }
 }
 
 function loop(){
-    updateCanvas();
-    window.requestAnimationFrame(loop);
+    // setTimeout(function(){
+    //     if(notStop){
+    //         draw();
+    //         notStop = updateCanvas();
+    //         window.requestAnimationFrame(loop);
+    //     }
+    // }, 200);
+    if(notStop){
+        draw();
+        notStop = updateCanvas();
+        window.requestAnimationFrame(loop);
+    }
 }
 
 function refreshPage(e){
