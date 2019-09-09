@@ -6,4 +6,6 @@ You can play around whit the variables in the `setupCanvas()`-function:
 * `rows` the number of rows
 * `cellSize` the size of one cell
 
+![](/images/maze_generator_screenshot.PNG)
+
 _Inspired by the coding challenge #10 made by [@TheCodingTrain](https://github.com/CodingTrain)._
