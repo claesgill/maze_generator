@@ -117,19 +117,59 @@ function create2dArray(cols, rows){
     return arr;
 }
 
-function markersRemainingUpdate(){
-    // Updating the flag-remainding-count
-    ctx.clearRect(cols*cellSize+10, 0, 50*3, 50);
-    ctx.font = "30px Courier New";
-    ctx.fillStyle = "black";
-    ctx.fillText("\u{1f6a9}=" + markersRemaining, cols*cellSize+10, 50/1.5);
+function onClickGenerateMaze(){
+    notStop = true;
+    let numberOfCells = document.getElementById("numCells").value;
+
+    // Parameters
+    cols = numberOfCells;
+    rows = numberOfCells;
+    cellSize = 20;
+
+    // Setup canvas
+    canvas = document.getElementById('my-canvas');
+    ctx = canvas.getContext('2d');
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Set white background
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    grid = create2dArray(cols, rows);
+
+    // Creating all the cells
+    for(let i = 0; i < cols; i++){
+        for(let j = 0; j < rows; j++){
+            grid[i][j] = new Cell(i, j, cellSize);
+        }  
+    }  
+
+    // Displaying the board
+    for(let i = 0; i < cols; i++){
+        for(let j = 0; j < rows; j++){
+            grid[i][j].show();
+        }   
+    }
+    
+    currentCell = grid[0][0];
+    currentCell.isVisited();
+    setTimeout(function(){
+        if(notStop){
+            draw();
+            notStop = updateCanvas();
+            window.requestAnimationFrame(loop);
+        }
+    }, 200);
 }
 
-function SetupCanvas(){
+function setupCanvas(){
+    let numberOfCells = document.getElementById("numCells").value;
+
     // Parameters
-    cols = 60;
-    rows = 60;
-    cellSize = 10;
+    cols = numberOfCells;
+    rows = numberOfCells;
+    cellSize = 20;
 
     // Setup canvas
     canvas = document.getElementById('my-canvas');
@@ -265,13 +305,6 @@ function draw(){
 }
 
 function loop(){
-    // setTimeout(function(){
-    //     if(notStop){
-    //         draw();
-    //         notStop = updateCanvas();
-    //         window.requestAnimationFrame(loop);
-    //     }
-    // }, 200);
     if(notStop){
         draw();
         notStop = updateCanvas();
@@ -287,7 +320,7 @@ function refreshPage(e){
 }
 
 // Setup the canvas when pages is loaded
-document.addEventListener('DOMContentLoaded', SetupCanvas);
+document.addEventListener('DOMContentLoaded', setupCanvas);
 // Refesh page when hitting 'r'-key
 document.addEventListener('keypress', refreshPage);
 // Render loop
